@@ -1,0 +1,119 @@
+local model = script.Parent
+local Rs = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+local varhandle = require(Rs.VariableHandle)
+local enemy = game:GetService("Workspace"):WaitForChild("Tomura Shigaraki")
+local toposition =(enemy.HumanoidRootPart.Position - model.HumanoidRootPart.Position).Magnitude
+local curtopos = toposition
+local tweenService = game:GetService("TweenService")
+local added = 0
+local projectile = {}
+local charactervariable = require(model.CharacterVariable)
+local debounce = false
+local positionnow = model.HumanoidRootPart.CFrame
+local fireChargeTier = 0
+local RunService = game:GetService("RunService")
+local itemdb = require(ServerStorage.ItemDb)
+local particlePhase = model.HumanoidRootPart:WaitForChild("phaseEffect")
+--loading add data same as db
+repeat wait() until itemdb.charDatabase ~= nil
+local dbget = itemdb.getDataChara(charactervariable.characterid)
+for i , valu in pairs(dbget["skilldetail"]) do
+	if(valu["skillid"] == "dabo1") then
+		table.insert(projectile,{skillid = "dabo1",skilleffect = 'laseattack',
+			power = valu["skillpower"],spred = valu["spreduce"],hpred = valu["hpreduce"]})
+	end
+	if(valu["skillid"] == "dabo2") then
+		table.insert(projectile,{skillid = "dabo2",skilleffect = 'chargeattack',
+			power = valu["skillpower"],spred = valu["spreduce"],hpred = valu["hpreduce"]})
+	end
+	if(valu["skillid"] == "dabo3") then
+		table.insert(projectile,{skillid = "dabo3",skilleffect = 'fireballattack',
+			power = valu["skillpower"],spred = valu["spreduce"],hpred = valu["hpreduce"]})
+	end
+	if(valu["skillid"] == "dabo4") then
+		table.insert(projectile,{skillid = "dabo4",skilleffect = 'ultimateattack',
+			power = valu["skillpower"],spred = valu["spreduce"],hpred = valu["hpreduce"]})
+	end
+end
+--end loading the character data on database
+
+--Universal Basic Attack
+local function basicAttackLogic ()
+	charactervariable.basicatk = true
+	local tempZpos = model.HumanoidRootPart.Position.Z 
+	tempZpos = tempZpos - toposition
+	local tween = TweenInfo.new(0.2,Enum.EasingStyle.Linear)
+	local goal = {}
+	goal.CFrame = model.HumanoidRootPart.CFrame * CFrame.new(0,0,tempZpos)
+	local tw =  tweenService:Create(model.HumanoidRootPart,tween,goal)
+	tw:Play()
+	tw.Completed:Wait()
+	wait(2)
+	model.HumanoidRootPart.CFrame = charactervariable.positionobject
+	varhandle.batk = false
+	varhandle.execbsatk = false
+end
+
+local function skillAttackLogic()
+	local skilleffect = nil;
+	for i , value in pairs(projectile) do
+		if(value["skillid"] == varhandle.selectedskill) then
+			skilleffect = value["skilleffect"]
+			break
+		end
+	end
+	charactervariable[skilleffect] = true
+	--play animation based on trigger
+end
+
+RunService.Heartbeat:Connect(function()
+	if(model.HumanoidRootPart.CFrame ~= positionnow) then
+		positionnow = model.HumanoidRootPart.CFrame
+	end
+	if varhandle.execbsatk == false then
+		if(tostring(varhandle.selectcharacter) == tostring(charactervariable.characterid) and tostring(varhandle.playernowturn) == tostring(charactervariable.playerused)) then
+			if(varhandle.batk == true) then
+				varhandle.execbsatk = true
+				wait(0.25)
+				basicAttackLogic()
+				--do basic attack
+			elseif(varhandle.satk == true) then
+				varhandle.execbsatk = true
+				wait(0.25)
+				skillAttackLogic()
+
+				--do skill
+			end
+		end
+	end
+	if(charactervariable.basicatk) then
+		local rayOrigin = script.Parent.PrimaryPart.Position
+		local rayDirection = rayOrigin * Vector3.new(0,0,20)
+		local rayCastRes = workspace:Raycast(rayOrigin,rayDirection)
+
+		if(rayCastRes) then
+			if(rayCastRes.Instance:GetAttribute("types") == "enemy") then
+				varhandle.enemyhit = true
+				charactervariable.basicatk = false
+			end
+		end
+	end
+	if(charactervariable.chargeattack) then
+		fireChargeTier = fireChargeTier + 1
+		if(particlePhase.Enabled ~= true) then
+			particlePhase.Enabled = true
+			particlePhase.Size = 5
+		else
+			particlePhase.Size += 5
+		end
+		varhandle.execbsatk = false
+		varhandle.selectedskill = nil
+		varhandle.satk = false	
+		charactervariable.chargeattack = false
+	end
+	
+end)
+
+
+--change basic attack action to character module 
